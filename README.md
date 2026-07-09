@@ -16,10 +16,13 @@
 .llmdev/
 ├── core/         工具无关的方法论（单一真源）
 ├── adapters/     各工具薄壳（claude-code / codex / codebuddy）
+│   └── claude-code/   adapter.md + skills/（llmdev-new-task, llmdev-reorient）
+│                      + agents/（llmdev-state-checker, llmdev-stuck-diagnoser）
 ├── templates/    可复制的产物模板（PLAN / STATE / JOURNAL）
-└── scripts/      sync（同步配置）/ loop（Codex 编排循环）/ init（应用到新项目）
+└── scripts/      sync / loop（Codex 编排循环）/ init（应用到新项目）/ new-task
 CLAUDE.md         生成物，勿手改
 AGENTS.md         生成物，勿手改
+.claude/skills/、.claude/agents/  由 sync.sh 分发的 llmdev-* 产物，勿手改
 ```
 
 ## 用法
@@ -30,7 +33,17 @@ AGENTS.md         生成物，勿手改
 bash .llmdev/scripts/sync.sh
 ```
 
-会重新生成 `CLAUDE.md`（Claude Code）和 `AGENTS.md`（Codex）。
+会重新生成 `CLAUDE.md`（Claude Code）、`AGENTS.md`（Codex），
+并把 Claude Code 的 skill/subagent 分发到 `.claude/skills/`、`.claude/agents/`。
+
+**开始跟踪一个新任务**（生成 PLAN/STATE/JOURNAL 三件套）：
+
+```bash
+.llmdev/scripts/new-task.sh <任务名>
+```
+
+在 Claude Code 里对应 skill `llmdev-new-task`；恢复/核对任务进度对应
+skill `llmdev-reorient`（会派发 `llmdev-state-checker` subagent 核对真实状态）。
 
 **应用到新项目**：
 
@@ -48,11 +61,11 @@ bash .llmdev/scripts/sync.sh
 
 1. **规划**（单独窗口）→ 用 `templates/PLAN.template.md` 产出自包含 plan。
 2. **执行**（新窗口）→ 开工先做"重新定位协议"；维护 STATE 账本，小步 commit。
+   同一问题失败 2 次 → 卡住协议（Claude Code 中派发 `llmdev-stuck-diagnoser`）。
 3. **复盘** → 读 JOURNAL 审计日志，确认该信任什么、该复查什么。
 
 ## 状态
 
-- ✅ 核心方法论、模板、sync/loop/init 脚本
-- ✅ Claude Code、Codex 适配
+- ✅ 核心方法论、模板、sync/loop/init/new-task 脚本
+- ✅ Claude Code 适配（含 skill/subagent）、Codex 适配
 - ⬜ CodeBuddy 深度适配（当前占位）
-- ⬜ Claude Code skills / subagents

@@ -11,7 +11,8 @@
   subagent（`llmdev-state-checker`、`llmdev-stuck-diagnoser`）。
 - **Codex**：支持核心方法论（`AGENTS.md`）与编排循环脚本 `loop.sh`，
   没有 skill/subagent 这类扩展机制。
-- **CodeBuddy**：仅有 adapter 占位文件，尚未深度适配，不能直接使用。
+- **CodeBuddy**：支持核心方法论（`CODEBUDDY.md`）与编排循环脚本 `loop.sh`，
+  没有 skill/subagent 这类扩展机制。
 
 ## 核心理念
 
@@ -27,9 +28,10 @@
 │   └── claude-code/   adapter.md + skills/（llmdev-new-task, llmdev-reorient）
 │                      + agents/（llmdev-state-checker, llmdev-stuck-diagnoser）
 ├── templates/    可复制的产物模板（PLAN / STATE / JOURNAL）
-└── scripts/      sync / loop（Codex 编排循环）/ init（应用到新项目）/ new-task
+└── scripts/      sync / loop（Codex、CodeBuddy 编排循环）/ init（应用到新项目）/ new-task
 CLAUDE.md         生成物，勿手改
 AGENTS.md         生成物，勿手改
+CODEBUDDY.md      生成物，勿手改
 .claude/skills/、.claude/agents/  由 sync.sh 分发的 llmdev-* 产物，勿手改
 ```
 
@@ -41,7 +43,7 @@ AGENTS.md         生成物，勿手改
 bash .llmdev/scripts/sync.sh
 ```
 
-会重新生成 `CLAUDE.md`（Claude Code）、`AGENTS.md`（Codex），
+会重新生成 `CLAUDE.md`（Claude Code）、`AGENTS.md`（Codex）、`CODEBUDDY.md`（CodeBuddy），
 并把 Claude Code 的 skill/subagent 分发到 `.claude/skills/`、`.claude/agents/`。
 
 **开始跟踪一个新任务**（生成 PLAN/STATE/JOURNAL 三件套）：
@@ -59,7 +61,7 @@ skill `llmdev-reorient`（会派发 `llmdev-state-checker` subagent 核对真实
 /path/to/框架/.llmdev/scripts/init.sh /path/to/新项目
 ```
 
-**用 Codex 跑长任务**（编排循环，补足其不自动换窗口的短板）：
+**用 Codex / CodeBuddy 跑长任务**（编排循环，补足其不自动换窗口的短板）：
 
 ```bash
 .llmdev/scripts/loop.sh docs/plans/PLAN-x.md docs/state/STATE-x.md 20
@@ -76,4 +78,4 @@ skill `llmdev-reorient`（会派发 `llmdev-state-checker` subagent 核对真实
 
 - ✅ 核心方法论、模板、sync/loop/init/new-task 脚本
 - ✅ Claude Code 适配（含 skill/subagent）、Codex 适配
-- ⬜ CodeBuddy 深度适配（当前占位）
+- ✅ CodeBuddy 适配（核心方法论 + loop.sh）

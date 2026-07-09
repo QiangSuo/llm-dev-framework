@@ -16,6 +16,7 @@ ADAPTERS_DIR="$LLMDEV_DIR/adapters"
 TARGETS=(
   "CLAUDE.md:claude-code"
   "AGENTS.md:codex"
+  "CODEBUDDY.md:codebuddy"
 )
 
 # adapter 可以是 adapters/<tool>.md（单文件）或 adapters/<tool>/adapter.md（目录形态）。
@@ -127,7 +128,7 @@ case "$MODE" in
       check_one "${entry%%:*}" "${entry##*:}" || drifted=1
     done
     if [[ "$drifted" -eq 0 ]]; then
-      echo "CLAUDE.md/AGENTS.md 与源文件一致。"
+      echo "CLAUDE.md/AGENTS.md/CODEBUDDY.md 与源文件一致。"
       exit 0
     else
       exit 1

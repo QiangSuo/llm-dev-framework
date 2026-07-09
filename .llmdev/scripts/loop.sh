@@ -34,8 +34,16 @@ for ((i=1; i<=MAX_ITERS; i++)); do
   # exec 模式：非交互执行一轮。不同 codex 版本参数可能不同，按需调整。
   codex exec "$PROMPT" || { echo "codex 本轮返回非零，停止。" >&2; break; }
 
-  if grep -qiE '需要人介入|阻塞|BLOCKED' "$STATE" 2>/dev/null \
-     && ! grep -qiE '需要人介入.*无|阻塞.*无' "$STATE" 2>/dev/null; then
+  # 提取"## 阻塞 / 需要人介入"标题后、下一个 "##" 标题或文件尾之间的内容，
+  # 去除首尾空白后必须恰好是"无"才算不阻塞；其余任何写法（包括自然语言的
+  # "没有阻塞"）都视为阻塞——结构化匹配，不做语义猜测。
+  blocked_section="$(awk '
+    /^## 阻塞/ { flag=1; next }
+    /^## / && flag { flag=0 }
+    flag { print }
+  ' "$STATE" 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^$' || true)"
+
+  if [[ -n "$blocked_section" && "$blocked_section" != "无" ]]; then
     echo ">> STATE 标记了需要人介入，停止循环。请查看 $STATE。"
     break
   fi

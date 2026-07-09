@@ -18,6 +18,10 @@ if ! command -v codex >/dev/null 2>&1; then
   exit 1
 fi
 
+# bash 3.2（macOS 自带）在 UTF-8 locale 下，set -u 生效时若 $VAR 后紧跟
+# 多字节 UTF-8 字符，会把该字符首字节误并入变量名，报 unbound variable。
+# 临时关闭 nounset 规避这个解析器缺陷，heredoc 内容本身没有问题。
+set +u
 read -r -d '' PROMPT <<EOF || true
 你在一个长程任务的自动编排循环中。本轮请：
 1. 重新定位：读 $PLAN 与 $STATE，并核对磁盘真实状态（git status、跑测试）。
@@ -28,6 +32,10 @@ read -r -d '' PROMPT <<EOF || true
    "阻塞/需要人介入"里写清原因，然后本轮结束。
 遵守下方 AGENTS.md 的全部规则。只做 PLAN 里的事。
 EOF
+set -u
+
+no_progress_rounds=0
+last_head="$(git rev-parse HEAD 2>/dev/null || echo "")"
 
 for ((i=1; i<=MAX_ITERS; i++)); do
   echo "=========== 循环 $i / $MAX_ITERS ==========="
@@ -44,7 +52,22 @@ for ((i=1; i<=MAX_ITERS; i++)); do
   ' "$STATE" 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^$' || true)"
 
   if [[ -n "$blocked_section" && "$blocked_section" != "无" ]]; then
-    echo ">> STATE 标记了需要人介入，停止循环。请查看 $STATE。"
+    echo ">> STATE 标记了需要人介入，停止循环。请查看 ${STATE}。"
+    break
+  fi
+
+  # 连续 2 轮没有新 commit 视为空转（与"同一问题失败 2 次触发卡住协议"的
+  # 阈值保持一致），提前停止，避免烧满 MAX_ITERS 却毫无进展。
+  current_head="$(git rev-parse HEAD 2>/dev/null || echo "")"
+  if [[ "$current_head" == "$last_head" ]]; then
+    no_progress_rounds=$((no_progress_rounds + 1))
+  else
+    no_progress_rounds=0
+    last_head="$current_head"
+  fi
+
+  if ((no_progress_rounds >= 2)); then
+    echo ">> 连续 2 轮没有新 commit，判定为空转，停止循环。请查看 ${STATE}。"
     break
   fi
 done

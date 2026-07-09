@@ -34,6 +34,27 @@ emit_header() {
   printf '<!-- 要改规则：编辑 .llmdev/core/ 或 %s，然后重跑 sync.sh。 -->\n\n' "$adapter_rel"
 }
 
+# 生成内容写到 stdout，供 build_one（写现网文件）和 check 模式（写临时文件后 diff）共用，
+# 避免生成逻辑在两条路径上各写一份、彼此漂移。
+render_one() {
+  local out="$1" tool="$2"
+  local adapter
+  adapter="$(resolve_adapter "$tool")"
+  if [[ -z "$adapter" ]]; then
+    echo "跳过 ${out}：找不到 ${tool} 的 adapter" >&2
+    return 1
+  fi
+  local adapter_rel="${adapter#"$LLMDEV_DIR"/}"
+  emit_header "$tool" ".llmdev/$adapter_rel"
+  cat "$adapter"
+  printf '\n\n---\n\n# 共享核心方法论\n\n'
+  # 按文件名排序拼接所有 core 文件
+  for f in "$CORE_DIR"/*.md; do
+    cat "$f"
+    printf '\n\n'
+  done
+}
+
 build_one() {
   local out="$1" tool="$2"
   local adapter
@@ -43,17 +64,28 @@ build_one() {
     return
   fi
   local adapter_rel="${adapter#"$LLMDEV_DIR"/}"
-  {
-    emit_header "$tool" ".llmdev/$adapter_rel"
-    cat "$adapter"
-    printf '\n\n---\n\n# 共享核心方法论\n\n'
-    # 按文件名排序拼接所有 core 文件
-    for f in "$CORE_DIR"/*.md; do
-      cat "$f"
-      printf '\n\n'
-    done
-  } > "$ROOT_DIR/$out"
+  render_one "$out" "$tool" > "$ROOT_DIR/$out"
   echo "已生成 ${out}（adapter: ${adapter_rel}）"
+}
+
+check_one() {
+  local out="$1" tool="$2"
+  local adapter
+  adapter="$(resolve_adapter "$tool")"
+  if [[ -z "$adapter" ]]; then
+    echo "跳过 ${out}：找不到 ${tool} 的 adapter" >&2
+    return 0
+  fi
+  local tmp
+  tmp="$(mktemp)"
+  render_one "$out" "$tool" > "$tmp"
+  if [[ ! -f "$ROOT_DIR/$out" ]] || ! diff -q "$tmp" "$ROOT_DIR/$out" >/dev/null 2>&1; then
+    echo "漂移：${out} 与源文件（core/adapter）不一致，请重跑 sync.sh" >&2
+    rm -f "$tmp"
+    return 1
+  fi
+  rm -f "$tmp"
+  return 0
 }
 
 # 分发 <tool>/skills、<tool>/agents 到 $ROOT_DIR/.claude/{skills,agents}。
@@ -86,10 +118,30 @@ distribute_claude_extras() {
   fi
 }
 
-for entry in "${TARGETS[@]}"; do
-  build_one "${entry%%:*}" "${entry##*:}"
-done
+MODE="${1:-build}"
 
-distribute_claude_extras
-
-echo "sync 完成。"
+case "$MODE" in
+  check)
+    drifted=0
+    for entry in "${TARGETS[@]}"; do
+      check_one "${entry%%:*}" "${entry##*:}" || drifted=1
+    done
+    if [[ "$drifted" -eq 0 ]]; then
+      echo "CLAUDE.md/AGENTS.md 与源文件一致。"
+      exit 0
+    else
+      exit 1
+    fi
+    ;;
+  build)
+    for entry in "${TARGETS[@]}"; do
+      build_one "${entry%%:*}" "${entry##*:}"
+    done
+    distribute_claude_extras
+    echo "sync 完成。"
+    ;;
+  *)
+    echo "未知模式：$MODE（支持：build（默认）、check）" >&2
+    exit 1
+    ;;
+esac

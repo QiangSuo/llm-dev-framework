@@ -1,9 +1,17 @@
 # 大模型通用开发框架
 
-一个 Codex / Claude Code / CodeBuddy 通用的开发框架，把"用大模型跑开发任务"
-反复遇到的问题沉淀成可复用的方法论、模板与脚本。核心解决一个问题：
+一个把"用大模型跑开发任务"反复遇到的问题沉淀成可复用方法论、模板与脚本的框架，
+目标是覆盖 Codex / Claude Code / CodeBuddy 等工具。核心解决一个问题：
 
 > **让开发状态外化到磁盘，从而不受单个对话窗口寿命（会满、会被压缩）的限制。**
+
+**当前真实覆盖范围**（不是三个工具对等支持，请按实际情况使用）：
+
+- **Claude Code**：完整支持，含 skill（`llmdev-new-task`、`llmdev-reorient`）与
+  subagent（`llmdev-state-checker`、`llmdev-stuck-diagnoser`）。
+- **Codex**：支持核心方法论（`AGENTS.md`）与编排循环脚本 `loop.sh`，
+  没有 skill/subagent 这类扩展机制。
+- **CodeBuddy**：仅有 adapter 占位文件，尚未深度适配，不能直接使用。
 
 ## 核心理念
 

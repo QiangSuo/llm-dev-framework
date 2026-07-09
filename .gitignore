@@ -1,0 +1,16 @@
+# Claude Code 本地配置（含机器专属权限，不进版本控制）
+.claude/settings.local.json
+
+# 各工具运行时/本地缓存
+.codex/
+.codebuddy/
+
+# 长任务的运行时产物（按需：若想追踪历史可删掉这几行）
+# docs/state/
+# docs/journal/
+
+# 常见系统 / 编辑器噪音
+.DS_Store
+*.swp
+.idea/
+.vscode/
